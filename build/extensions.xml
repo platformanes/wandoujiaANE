@@ -1,0 +1,18 @@
+<extension xmlns="http://ns.adobe.com/air/extension/3.4">
+    <id>com.wanglailai.ane4wdj</id>
+    <versionNumber>0.0.1</versionNumber>
+    <description>Native extensions create by wanglailai@gmail.com.</description>
+    <copyright>Everyone is permitted to copy and distribute the Code.</copyright>
+    <platforms>
+        <platform name="Android-ARM">
+            <applicationDeployment>
+                <nativeLibrary>libane4wdj.jar</nativeLibrary>
+                <initializer>com.wanglailai.extensions.WdjExtension</initializer>
+                <finalizer>com.wanglailai.extensions.WdjExtension</finalizer>
+            </applicationDeployment>
+        </platform>
+        <platform name="default"> 
+            <applicationDeployment/> 
+        </platform> 
+    </platforms>
+</extension>

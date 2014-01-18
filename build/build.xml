@@ -1,0 +1,121 @@
+<?xml version="1.0" ?>
+<project name="Air Native Extension Build Scripts" default="build" basedir="../">
+    
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="./build/ant/lib/ant-contrib-1.0b3.jar"/>
+        </classpath>
+    </taskdef>
+    
+	<property file="build/build.properties" />
+	
+	<target name="build" depends="ext_init, ext_and,ext_as3-default, ext_as3-android, ext_package,ext_clean,ext_deploy"
+    		description="Build the extension"/>
+	
+	<target name="ext_init">
+		<!-- create necessary folders to compile the extension -->
+		<mkdir dir="${BIN_DEF_DIR}"/>
+		<mkdir dir="${BIN_AND_DIR}"/>
+        	<mkdir dir="${BIN_SIM_DIR}"/>
+	</target>
+    
+	<target name="ext_and">
+		<!-- Build Android native library -->
+		<mkdir dir="${TMP_DIR}"/>
+		<ant antfile="build.xml" target="-compile" dir="${SRC_AND_DIR}" inheritall="false">
+			<property name="build.target" value="-compile"/>
+			<property name="verbose" value="false"/>
+		</ant>
+		<jar destfile="${TMP_DIR}/lib${LIB_NAME}.jar">
+			<fileset dir="${SRC_AND_DIR}/bin/classes"/>
+		    <restrict>
+                <name name="**/*.class"/>
+                <archives>
+                    <zips>
+                        <fileset dir="${SRC_AND_DIR}/libs" includes="**/*.jar" excludes="**/FlashRuntimeExtensions.jar"/>
+                    </zips>
+                </archives>
+		    </restrict>
+		</jar>
+		<copy file="${TMP_DIR}/lib${LIB_NAME}.jar" todir="${BIN_AND_DIR}" overwrite="true"/>
+		<delete dir="${TMP_DIR}"/>
+	</target>
+   
+    
+    <target name="ext_as3-default">
+        <antcall target="ext_as3">
+            <param name="source" value="${SRC_AS3_DIR}"/>
+            <param name="destination" value="${BIN_DEF_DIR}"/>
+            <param name="default" value="true"/>
+        </antcall>
+    </target>
+    
+    <target name="ext_as3-android">
+        <antcall target="ext_as3">
+            <param name="source" value="${SRC_AS3_DIR}"/>
+            <param name="destination" value="${BIN_AND_DIR}"/>
+        </antcall>
+    </target>
+    
+    <target name="ext_as3">
+        <!-- Build Actionscript extension bridge -->
+        <mkdir dir="${TMP_DIR}"/>
+        <fileset dir="${source}/src" casesensitive="yes" id="files">
+            <include name="**/*.as"/>
+        </fileset>
+        <pathconvert property="classes" refid="files" pathsep=" " dirsep=".">
+            <regexpmapper from=".*src.(.*)\.as" to="\1"/>
+        </pathconvert>
+        <exec executable="${COMPC}" failonerror="true">
+            <arg line="-source-path ${source}/src"/>
+            <arg line="-output ${TMP_DIR}/library.swc"/>
+            <arg line="-swf-version ${SWF_VERSION}"/>
+            <arg line="-external-library-path+='${FLEX_HOME}/frameworks/libs/air/airglobal.swc'"/>
+            <arg line="-include-classes ${classes}"/>
+        </exec>
+        <mkdir dir="${TMP_DIR}/content"/>
+        <if>
+            <and>
+                <isset property="default" />
+                <equals arg1="${default}" arg2="true"/>
+            </and>
+            <then>
+                <copy file="${TMP_DIR}/library.swc" tofile="${BIN_DIR}/${LIB_NAME}.swc"/>
+            </then>
+        </if>
+        <unzip src="${TMP_DIR}/library.swc" dest="${TMP_DIR}/content" overwrite="true"/>
+        <copy file="${TMP_DIR}/content/library.swf" todir="${destination}"/>
+        <delete dir="${TMP_DIR}"/>
+    </target>
+    
+	<target name="ext_package">
+		<!-- Package the final extension -->
+		<java jar="${ADT}" fork="true" failonerror="true">
+		 	<arg line="-package"/>
+		 	<arg line="-target ane ${BIN_DIR}/${ANE_NAME}.ane ${ANE_DESCRIPTOR}"/>
+		 	<arg line="-swc ${BIN_DIR}/${LIB_NAME}.swc"/>
+			<arg line="-platform Android-ARM -C ${BIN_AND_DIR} ."/>
+            <!--
+             <arg line="-storetype pkcs12"/>
+             <arg line="-keystore ${KEYSTORE}"/>
+             <arg line="-storepass ${STOREPASS}"/>
+             <arg line="-tsa none"/>
+             <arg line="-platform QNX-x86 -C bin/native/qnx-x86 ."/>
+             <arg line="-platform QNX-ARM -C bin/native/qnx-arm ."/>
+             -->
+		 	<arg line="-platform default -C ${BIN_DEF_DIR} ."/>
+        </java>
+	</target>
+	
+	<target name="ext_clean">
+		<!-- remove temporary folders needed to build the extension -->
+		<delete dir="${BIN_NATIVE}"/>
+		<delete dir="${TMP_DIR}"/>
+	</target>
+	
+	<target name="ext_deploy">
+		<!-- deploys the compiled extension to the demo project -->
+		<copy file="${BIN_DIR}/${ANE_NAME}.ane" todir="${REL_DIR}" overwrite="true"/>
+	</target>
+	
+</project>
